@@ -1,0 +1,40 @@
+name: "Remote server connection"
+description: "Adds a ssh key to the runner and connects to a remote server and can execute commands"
+inputs:
+  ssh-private-key:
+    description: "Private key of the ssh"
+    required: true
+  server-host:
+    description: "Host of the server"
+    required: true
+  username:
+    description: "Username of the server"
+    required: true
+  command:
+    description: "Command to execute on the server"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Add SSH Key
+      run: |
+        mkdir -p ~/.ssh/
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        eval $(ssh-agent -s)
+        ssh-add ~/.ssh/id_rsa
+        ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
+        ssh-add -L
+      shell: bash
+      env:
+        SSH_PRIVATE_KEY: ${{ inputs.ssh-private-key }}
+        SERVER_HOST: ${{ inputs.server-host }}
+
+    - name: Connect to server
+      run: |
+        ssh $USERNAME@$SERVER_HOST "$COMMAND"
+      shell: bash
+      env:
+        USERNAME: ${{ inputs.username }}
+        SERVER_HOST: ${{ inputs.server-host }}
+        COMMAND: ${{ inputs.command }}
